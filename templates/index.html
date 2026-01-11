@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Episodes & Guests</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .section { margin: 30px 0; padding: 20px; border: 1px solid #ddd; }
+        button { padding: 8px 15px; margin: 5px; cursor: pointer; }
+        .item { padding: 10px; margin: 5px 0; background: #f5f5f5; }
+        input, select { padding: 5px; margin: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Episodes & Guests Manager</h1>
+
+    <div class="section">
+        <h2>Episodes</h2>
+        <button onclick="loadEpisodes()">Load Episodes</button>
+        <div id="episodes"></div>
+    </div>
+
+    <div class="section">
+        <h2>Episode Details</h2>
+        <input type="number" id="episodeId" placeholder="Episode ID">
+        <button onclick="loadEpisodeDetails()">Load Details</button>
+        <div id="episodeDetails"></div>
+    </div>
+
+    <div class="section">
+        <h2>Guests</h2>
+        <button onclick="loadGuests()">Load Guests</button>
+        <div id="guests"></div>
+    </div>
+
+    <div class="section">
+        <h2>Create Appearance</h2>
+        <input type="number" id="rating" placeholder="Rating (1-5)" min="1" max="5">
+        <input type="number" id="newEpisodeId" placeholder="Episode ID">
+        <input type="number" id="guestId" placeholder="Guest ID">
+        <button onclick="createAppearance()">Create</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function loadEpisodes() {
+            const res = await fetch('/episodes');
+            const data = await res.json();
+            document.getElementById('episodes').innerHTML = data.map(e => 
+                `<div class="item">ID: ${e.id} | Date: ${e.date} | Number: ${e.number}</div>`
+            ).join('');
+        }
+
+        async function loadEpisodeDetails() {
+            const id = document.getElementById('episodeId').value;
+            const res = await fetch(`/episodes/${id}`);
+            const data = await res.json();
+            if (res.status === 404) {
+                document.getElementById('episodeDetails').innerHTML = `<div class="error">${data.error}</div>`;
+                return;
+            }
+            let html = `<div class="item"><strong>Episode ${data.number}</strong> (${data.date})<br>`;
+            if (data.appearances && data.appearances.length > 0) {
+                html += '<strong>Appearances:</strong><br>';
+                data.appearances.forEach(a => {
+                    html += `- ${a.guest.name} (${a.guest.occupation}) - Rating: ${a.rating}<br>`;
+                });
+            }
+            html += '</div>';
+            document.getElementById('episodeDetails').innerHTML = html;
+        }
+
+        async function loadGuests() {
+            const res = await fetch('/guests');
+            const data = await res.json();
+            document.getElementById('guests').innerHTML = data.map(g => 
+                `<div class="item">ID: ${g.id} | ${g.name} - ${g.occupation}</div>`
+            ).join('');
+        }
+
+        async function createAppearance() {
+            const rating = document.getElementById('rating').value;
+            const episode_id = document.getElementById('newEpisodeId').value;
+            const guest_id = document.getElementById('guestId').value;
+            
+            const res = await fetch('/appearances', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({rating: parseInt(rating), episode_id: parseInt(episode_id), guest_id: parseInt(guest_id)})
+            });
+            const data = await res.json();
+            
+            if (res.status === 201) {
+                document.getElementById('result').innerHTML = `<div class="success">Created! ID: ${data.id}</div>`;
+            } else {
+                document.getElementById('result').innerHTML = `<div class="error">Error: ${data.errors.join(', ')}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
